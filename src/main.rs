@@ -6,8 +6,8 @@ use ratatui::{
     prelude::{Buffer, Rect},
     style::{Color, Style, Stylize},
     symbols::border,
-    text::{self, Line, Span},
-    widgets::{Block, Gauge, LineGauge, Paragraph, Widget},
+    text::Line,
+    widgets::{Block, Gauge, Paragraph, Widget},
     DefaultTerminal, Frame,
 };
 
@@ -15,7 +15,7 @@ fn main() -> io::Result<()> {
     let mut terminal = ratatui::init();
     let mut app = App {
         exit: false,
-        background_progress: 0.3_f64,
+        background_progress: 0.3134_f64,
     };
     let app_result = app.run(&mut terminal);
     ratatui::restore();
@@ -56,19 +56,25 @@ impl Widget for &App {
             Layout::vertical([Constraint::Percentage(20), Constraint::Percentage(80)]);
         let [text_area, gauge_area] = horizontal_layout.areas(area);
         let block = Block::bordered()
-            .title(Line::from("Background process").centered().bold())
+            .title(Line::from(" Background processes "))
             .border_set(border::THICK);
-        let line = Line::from("Test").yellow();
+        let line = Line::from("Process overview").bold();
         // Span::raw("Test").yellow().render(area, buf);
         let progress_bar = Gauge::default()
             .gauge_style(Style::default().fg(Color::Green))
-            .label("Progress")
+            .block(block)
+            .label(format!("Process 1: {:.2}%", self.background_progress))
             .ratio(self.background_progress);
 
-        Paragraph::new(line)
-            .centered()
-            .block(block)
-            .render(text_area, buf);
-        progress_bar.render(gauge_area, buf);
+        Paragraph::new(line).render(text_area, buf);
+        progress_bar.render(
+            Rect {
+                x: gauge_area.left(),
+                y: gauge_area.top(),
+                width: gauge_area.width,
+                height: 3,
+            },
+            buf,
+        );
     }
 }
