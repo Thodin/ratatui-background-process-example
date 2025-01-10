@@ -7,7 +7,7 @@ use ratatui::{
     style::{Color, Style, Stylize},
     symbols::border,
     text::Line,
-    widgets::{Block, Gauge, Paragraph, Widget},
+    widgets::{Block, Gauge, Widget},
     DefaultTerminal, Frame,
 };
 
