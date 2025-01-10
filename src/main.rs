@@ -24,6 +24,8 @@ fn main() -> io::Result<()> {
     });
 
     // Thread that does a computational heavy task.
+    // If you would like to communicate to the task, i.e. start/stop/pause the process,
+    // a second channel is required.
     let tx_to_background_progress_events = event_tx.clone();
     thread::spawn(move || {
         run_background_thread(tx_to_background_progress_events);
