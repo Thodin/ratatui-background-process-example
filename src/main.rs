@@ -20,11 +20,6 @@ fn main() -> io::Result<()> {
         handle_input_events(tx_to_input_events);
     });
 
-    let tx_to_tick_events = event_tx.clone();
-    thread::spawn(move || {
-        tick_event(tx_to_tick_events);
-    });
-
     let tx_to_background_progress_events = event_tx.clone();
     thread::spawn(move || {
         run_background_thread(tx_to_background_progress_events);
@@ -43,7 +38,6 @@ fn main() -> io::Result<()> {
 enum Event {
     Input(event::KeyEvent), // crossterm event
     Progress(f64),
-    Tick,
     Resize,
 }
 
@@ -59,13 +53,6 @@ fn handle_input_events(tx: mpsc::Sender<Event>) {
             event::Event::Resize(_, _) => tx.send(Event::Resize).unwrap(),
             _ => {}
         }
-    }
-}
-
-fn tick_event(tx: mpsc::Sender<Event>) {
-    loop {
-        thread::sleep(Duration::from_millis(200));
-        tx.send(Event::Tick).unwrap();
     }
 }
 
@@ -86,7 +73,6 @@ impl App {
             match rx.recv().unwrap() {
                 Event::Input(key_event) => self.handle_key_event(key_event)?,
                 Event::Progress(progress) => self.background_progress = progress,
-                Event::Tick => {} // don't need to do anything here, tick is only used to trigger a re-draw.
                 Event::Resize => terminal.autoresize()?,
             }
             terminal.draw(|frame| self.draw(frame))?;
