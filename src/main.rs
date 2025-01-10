@@ -27,6 +27,7 @@ fn main() -> io::Result<()> {
 
     let mut app = App {
         exit: false,
+        progress_bar_color: Color::Green,
         background_progress: 0_f64,
     };
 
@@ -36,13 +37,14 @@ fn main() -> io::Result<()> {
 }
 
 enum Event {
-    Input(event::KeyEvent), // crossterm event
+    Input(event::KeyEvent), // crossterm key input event
     Progress(f64),
     Resize,
 }
 
 pub struct App {
     exit: bool,
+    progress_bar_color: Color,
     background_progress: f64,
 }
 
@@ -87,6 +89,12 @@ impl App {
     fn handle_key_event(&mut self, key_event: event::KeyEvent) -> io::Result<()> {
         if key_event.kind == KeyEventKind::Press && key_event.code == KeyCode::Char('q') {
             self.exit = true;
+        } else if key_event.kind == KeyEventKind::Press && key_event.code == KeyCode::Char('c') {
+            if self.progress_bar_color == Color::Green {
+                self.progress_bar_color = Color::Yellow;
+            } else {
+                self.progress_bar_color = Color::Green;
+            }
         }
 
         Ok(())
@@ -97,13 +105,22 @@ impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let horizontal_layout =
             Layout::vertical([Constraint::Percentage(20), Constraint::Percentage(80)]);
+
         let [text_area, gauge_area] = horizontal_layout.areas(area);
+        let instructions = Line::from(vec![
+            " Change color ".into(),
+            "<C>".blue().bold(),
+            " Quit ".into(),
+            "<Q> ".blue().bold(),
+        ])
+        .centered();
         let block = Block::bordered()
             .title(Line::from(" Background processes "))
+            .title_bottom(instructions)
             .border_set(border::THICK);
         let line = Line::from("Process overview").bold();
         let progress_bar = Gauge::default()
-            .gauge_style(Style::default().fg(Color::Green))
+            .gauge_style(Style::default().fg(self.progress_bar_color))
             .block(block)
             .label(format!(
                 "Process 1: {:.2}%",
