@@ -13,13 +13,17 @@ use ratatui::{
 
 fn main() -> io::Result<()> {
     let mut terminal = ratatui::init();
+
+    // Create the channel via which the events will be sent to the main app.
     let (event_tx, event_rx) = mpsc::channel::<Event>();
 
+    // Thread to listen for input events.
     let tx_to_input_events = event_tx.clone();
     thread::spawn(move || {
         handle_input_events(tx_to_input_events);
     });
 
+    // Thread that does a computational heavy task.
     let tx_to_background_progress_events = event_tx.clone();
     thread::spawn(move || {
         run_background_thread(tx_to_background_progress_events);
@@ -31,15 +35,21 @@ fn main() -> io::Result<()> {
         background_progress: 0_f64,
     };
 
+    // App runs on the main thread.
     let app_result = app.run(&mut terminal, event_rx);
+
+    // Note: If your threads need clean-up (i.e. the computation thread),
+    // you should communicatie to them that the app wants to shut down.
+    // This is not required here, as our threads don't use resources.
     ratatui::restore();
     app_result
 }
 
+// Events that can be sent to the main thread.
 enum Event {
     Input(event::KeyEvent), // crossterm key input event
-    Progress(f64),
-    Resize,
+    Resize,                 // Resize event
+    Progress(f64),          // progress update from the computation thread
 }
 
 pub struct App {
@@ -48,6 +58,7 @@ pub struct App {
     background_progress: f64,
 }
 
+/// Block, waiting for input events from the user.
 fn handle_input_events(tx: mpsc::Sender<Event>) {
     loop {
         match event::read().unwrap() {
@@ -58,6 +69,7 @@ fn handle_input_events(tx: mpsc::Sender<Event>) {
     }
 }
 
+/// Simulate a computational heavy task.
 fn run_background_thread(tx: mpsc::Sender<Event>) {
     let mut progress = 0_f64;
     let increment = 0.01_f64;
@@ -70,6 +82,7 @@ fn run_background_thread(tx: mpsc::Sender<Event>) {
 }
 
 impl App {
+    /// Main task to be run continuously
     fn run(&mut self, terminal: &mut DefaultTerminal, rx: mpsc::Receiver<Event>) -> io::Result<()> {
         while !self.exit {
             match rx.recv().unwrap() {
@@ -82,10 +95,12 @@ impl App {
         Ok(())
     }
 
+    /// Render `self`, as we implemented the Widget trait for &App
     fn draw(&self, frame: &mut Frame) {
         frame.render_widget(self, frame.area());
     }
 
+    /// Actions that should be taken when a key event comes in.
     fn handle_key_event(&mut self, key_event: event::KeyEvent) -> io::Result<()> {
         if key_event.kind == KeyEventKind::Press && key_event.code == KeyCode::Char('q') {
             self.exit = true;
@@ -103,10 +118,18 @@ impl App {
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let horizontal_layout =
+        // Split the screen vertically in a 20:80 ratio.
+        // Top is used for title, bottom for the progress gauge.
+        let vertical_layout =
             Layout::vertical([Constraint::Percentage(20), Constraint::Percentage(80)]);
+        let [title_area, gauge_area] = vertical_layout.areas(area);
 
-        let [text_area, gauge_area] = horizontal_layout.areas(area);
+        // Render a title in the top of the layout
+        Line::from("Process overview")
+            .bold()
+            .render(title_area, buf);
+
+        // Prepare the widgets for the bottom part of the layout.
         let instructions = Line::from(vec![
             " Change color ".into(),
             "<C>".blue().bold(),
@@ -114,11 +137,14 @@ impl Widget for &App {
             "<Q> ".blue().bold(),
         ])
         .centered();
+
+        // Block to be displayed around the progress bar.
         let block = Block::bordered()
             .title(Line::from(" Background processes "))
             .title_bottom(instructions)
             .border_set(border::THICK);
-        let line = Line::from("Process overview").bold();
+
+        // Progress bar with label on it.
         let progress_bar = Gauge::default()
             .gauge_style(Style::default().fg(self.progress_bar_color))
             .block(block)
@@ -128,7 +154,7 @@ impl Widget for &App {
             ))
             .ratio(self.background_progress);
 
-        Paragraph::new(line).render(text_area, buf);
+        // Render the progress bar in the gauge area, with a fixed height of 3 lines (2 for block, 1 for bar)
         progress_bar.render(
             Rect {
                 x: gauge_area.left(),
