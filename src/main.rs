@@ -1,6 +1,6 @@
 use std::{io, sync::mpsc, thread, time::Duration};
 
-use crossterm::event::{self, KeyCode, KeyEventKind};
+use crossterm::event::{KeyCode, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Layout},
     prelude::{Buffer, Rect},
@@ -49,9 +49,9 @@ fn main() -> io::Result<()> {
 
 // Events that can be sent to the main thread.
 enum Event {
-    Input(event::KeyEvent), // crossterm key input event
-    Resize,                 // Resize event
-    Progress(f64),          // progress update from the computation thread
+    Input(crossterm::event::KeyEvent), // crossterm key input event
+    Resize,                            // Resize event
+    Progress(f64),                     // progress update from the computation thread
 }
 
 pub struct App {
@@ -63,9 +63,9 @@ pub struct App {
 /// Block, waiting for input events from the user.
 fn handle_input_events(tx: mpsc::Sender<Event>) {
     loop {
-        match event::read().unwrap() {
-            event::Event::Key(key_event) => tx.send(Event::Input(key_event)).unwrap(),
-            event::Event::Resize(_, _) => tx.send(Event::Resize).unwrap(),
+        match crossterm::event::read().unwrap() {
+            crossterm::event::Event::Key(key_event) => tx.send(Event::Input(key_event)).unwrap(),
+            crossterm::event::Event::Resize(_, _) => tx.send(Event::Resize).unwrap(),
             _ => {}
         }
     }
@@ -103,7 +103,7 @@ impl App {
     }
 
     /// Actions that should be taken when a key event comes in.
-    fn handle_key_event(&mut self, key_event: event::KeyEvent) -> io::Result<()> {
+    fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) -> io::Result<()> {
         if key_event.kind == KeyEventKind::Press && key_event.code == KeyCode::Char('q') {
             self.exit = true;
         } else if key_event.kind == KeyEventKind::Press && key_event.code == KeyCode::Char('c') {
