@@ -1,6 +1,6 @@
 use std::io;
 
-use crossterm::event::{self, KeyCode, KeyEventKind};
+use crossterm::event::{KeyCode, KeyEventKind};
 use ratatui::{
     prelude::{Buffer, Rect},
     style::Stylize,
@@ -29,7 +29,7 @@ impl App {
     /// Main task to be run continuously
     fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         while !self.exit {
-            match event::read()? {
+            match crossterm::event::read()? {
                 crossterm::event::Event::Key(key_event) => self.handle_key_event(key_event)?,
                 _ => {}
             }
@@ -44,7 +44,7 @@ impl App {
     }
 
     /// Actions that should be taken when a key event comes in.
-    fn handle_key_event(&mut self, key_event: event::KeyEvent) -> io::Result<()> {
+    fn handle_key_event(&mut self, key_event: crossterm::event::KeyEvent) -> io::Result<()> {
         if key_event.kind == KeyEventKind::Press && key_event.code == KeyCode::Char('q') {
             self.exit = true;
         }
