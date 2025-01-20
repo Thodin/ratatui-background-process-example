@@ -50,7 +50,6 @@ fn main() -> io::Result<()> {
 // Events that can be sent to the main thread.
 enum Event {
     Input(crossterm::event::KeyEvent), // crossterm key input event
-    Resize,                            // Resize event
     Progress(f64),                     // progress update from the computation thread
 }
 
@@ -65,7 +64,6 @@ fn handle_input_events(tx: mpsc::Sender<Event>) {
     loop {
         match crossterm::event::read().unwrap() {
             crossterm::event::Event::Key(key_event) => tx.send(Event::Input(key_event)).unwrap(),
-            crossterm::event::Event::Resize(_, _) => tx.send(Event::Resize).unwrap(),
             _ => {}
         }
     }
@@ -90,7 +88,6 @@ impl App {
             match rx.recv().unwrap() {
                 Event::Input(key_event) => self.handle_key_event(key_event)?,
                 Event::Progress(progress) => self.background_progress = progress,
-                Event::Resize => terminal.autoresize()?,
             }
             terminal.draw(|frame| self.draw(frame))?;
         }
